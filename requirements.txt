@@ -1,0 +1,46 @@
+# UPI Fraud Detection — Project Dependencies
+#
+# This file lists the planned dependencies for the full project across all
+# phases. Nothing here is installed or configured yet as of Phase 1 —
+# this file exists only to document intent and pin versions ahead of time.
+
+# --- Core data & ML (Phase 2+) ---
+pandas
+numpy
+# Pinned exactly: the trained model files in models/*.joblib were
+# created with scikit-learn 1.8.0. Scikit-learn does not guarantee
+# pickle/joblib compatibility across versions (internal model
+# structure can change between releases), so installing a newer
+# version here can make the existing model files fail to load with
+# errors like "ModuleNotFoundError: No module named '_loss'". If you
+# retrain the models yourself with a newer scikit-learn, update this
+# pin to match.
+scikit-learn==1.8.0
+xgboost
+
+# --- Notebooks (Phase 2+) ---
+jupyter
+
+# --- Real-time streaming (later phase) ---
+kafka-python
+
+# --- Caching / low-latency state (later phase) ---
+redis
+
+# --- API layer (later phase) ---
+fastapi
+uvicorn
+pydantic
+
+# --- Database (later phase) ---
+psycopg2-binary
+sqlalchemy
+
+# --- Dashboard (later phase) ---
+streamlit
+
+# --- Testing ---
+pytest
+
+# --- Utilities ---
+python-dotenv

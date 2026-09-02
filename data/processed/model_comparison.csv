@@ -1,0 +1,4 @@
+model,precision,recall,f1,roc_auc,pr_auc,n_flagged,n_fraud,true_positives,false_positives,false_negatives
+Logistic Regression (baseline),0.4921,0.9735,0.6537,0.9947,0.9255,821,415,404,417,11
+"Gradient Boosting (HistGB, XGBoost-family)",0.9343,0.959,0.9465,0.9992,0.9876,426,415,398,28,17
+Autoencoder (reconstruction error),0.6751,0.6458,0.6601,0.9629,0.7385,397,415,268,129,147
