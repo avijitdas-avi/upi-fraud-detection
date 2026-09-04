@@ -65,13 +65,63 @@ class _SenderState:
     def mean_hour_or_nan(self) -> float:
         return self.mean_hour if self.count >= 1 else float("nan")
 
+    # --- Serialization (Phase 9) -----------------------------------------
+    # A plain-dict / JSON-safe representation of this state, so it can be
+    # stored somewhere external (Redis) instead of only living in this
+    # process's memory. Deques become lists, defaultdicts become plain
+    # dicts, and datetimes become ISO strings — all reversible via
+    # from_dict(). This round-trip is directly unit tested
+    # (tests/test_state_serialization.py) since it's the part most
+    # likely to have real bugs, independent of whether the network
+    # call to an actual Redis server works.
+
+    def to_dict(self) -> dict:
+        return {
+            "count": self.count,
+            "mean_amount": self.mean_amount,
+            "m2_amount": self.m2_amount,
+            "mean_hour": self.mean_hour,
+            "m2_hour": self.m2_hour,
+            "last_timestamp": self.last_timestamp.isoformat() if self.last_timestamp else None,
+            "recent_timestamps": [t.isoformat() for t in self.recent_timestamps],
+            "device_counts": dict(self.device_counts),
+            "location_counts": dict(self.location_counts),
+            "receiver_counts": dict(self.receiver_counts),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "_SenderState":
+        state = cls(
+            count=data["count"],
+            mean_amount=data["mean_amount"],
+            m2_amount=data["m2_amount"],
+            mean_hour=data["mean_hour"],
+            m2_hour=data["m2_hour"],
+            last_timestamp=datetime.fromisoformat(data["last_timestamp"]) if data["last_timestamp"] else None,
+        )
+        state.recent_timestamps = deque(datetime.fromisoformat(t) for t in data["recent_timestamps"])
+        state.device_counts = defaultdict(int, data["device_counts"])
+        state.location_counts = defaultdict(int, data["location_counts"])
+        state.receiver_counts = defaultdict(int, data["receiver_counts"])
+        return state
+
 
 NO_PRIOR_TXN_SENTINEL_SECONDS = 9_999_999.0
 
 
 class RealtimeFeatureComputer:
-    def __init__(self):
-        self._senders: dict = defaultdict(_SenderState)
+    def __init__(self, state_store: Optional["StateStore"] = None):
+        """
+        `state_store` decides where per-sender state actually lives.
+        Defaults to `InMemoryStateStore` (a plain dict, same behavior
+        as this class had before Phase 9) — pass a `RedisStateStore`
+        instead to persist state externally. See
+        `src/api/state_store.py` for both implementations. Everything
+        below this line is unchanged from Phase 7's logic; only where
+        state is read from and written to changed.
+        """
+        from src.api.state_store import InMemoryStateStore  # local import avoids a circular import
+        self.store = state_store if state_store is not None else InMemoryStateStore()
 
     def warm_start(self, historical_rows) -> None:
         """Replay historical transactions (in chronological order) to
@@ -86,7 +136,7 @@ class RealtimeFeatureComputer:
         the sender's history *before* it — does not modify state.
         Call `record_transaction` afterward to add it to history."""
         sender = transaction["sender_upi_id"]
-        state = self._senders[sender]
+        state = self.store.get(sender)
         timestamp: datetime = transaction["timestamp"]
         amount: float = transaction["amount"]
         hour: int = transaction["hour_of_day"]
@@ -145,7 +195,7 @@ class RealtimeFeatureComputer:
     def record_transaction(self, transaction: Mapping[str, Any]) -> None:
         """Update the sender's running state to include this transaction."""
         sender = transaction["sender_upi_id"]
-        state = self._senders[sender]
+        state = self.store.get(sender)
         timestamp: datetime = transaction["timestamp"]
         amount: float = transaction["amount"]
         hour: int = transaction["hour_of_day"]
@@ -175,6 +225,8 @@ class RealtimeFeatureComputer:
             state.location_counts[location] += 1
         if receiver is not None:
             state.receiver_counts[receiver] += 1
+
+        self.store.set(sender, state)
 
     @staticmethod
     def _prune_old(state: _SenderState, current_time: datetime) -> None:

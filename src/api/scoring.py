@@ -120,6 +120,7 @@ class LiveScoringService:
         model_path: str = DEFAULT_MODEL_PATH,
         historical_data_path: str = DEFAULT_HISTORICAL_DATA_PATH,
         historical_df: Optional[pd.DataFrame] = None,
+        state_store=None,
     ):
         """
         `historical_df`, if given, is used to warm-start sender state
@@ -129,12 +130,18 @@ class LiveScoringService:
         to be streamed in as "new" transactions without double-
         counting them into a sender's history. See
         `src/streaming/realtime_processor.py` for exactly this use.
+
+        `state_store` (Phase 9), if given, is passed through to
+        `RealtimeFeatureComputer` — pass a `RedisStateStore`
+        (`src/api/state_store.py`) to persist sender state externally
+        instead of only in this process's memory. Defaults to
+        in-memory, same as before Phase 9.
         """
         artifact = joblib.load(model_path)
         self.model = artifact["model"]
         self.feature_names = artifact["feature_names"]
         self.rule_engine = RuleEngine()
-        self.feature_computer = RealtimeFeatureComputer()
+        self.feature_computer = RealtimeFeatureComputer(state_store=state_store)
 
         if historical_df is not None:
             df = historical_df.copy()

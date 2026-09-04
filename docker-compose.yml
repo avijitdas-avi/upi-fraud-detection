@@ -36,3 +36,14 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: upi-fraud-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
