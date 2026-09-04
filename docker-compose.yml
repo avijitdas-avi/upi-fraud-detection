@@ -47,3 +47,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: upi-fraud-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: upi_user
+      POSTGRES_PASSWORD: upi_pass
+      POSTGRES_DB: upi_fraud_detection
+    volumes:
+      - upi_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U upi_user -d upi_fraud_detection"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  upi_postgres_data:
