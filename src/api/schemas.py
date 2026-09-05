@@ -68,3 +68,23 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     known_senders: int
+
+
+class DecisionResponse(BaseModel):
+    transaction_id: str
+    sender_upi_id: str
+    receiver_upi_id: str
+    amount: float
+    transaction_type: str
+    fraud_probability: float
+    risk_level: str
+    triggered_rules: list
+    final_decision: str
+    explanation: str
+    scored_at: str
+
+
+class DecisionStatsResponse(BaseModel):
+    total: int
+    by_decision: dict
+    by_risk_level: dict

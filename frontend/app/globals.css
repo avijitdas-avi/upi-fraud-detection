@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* Tabular numerals for every monospace number — amounts, IDs,
+   probabilities line up cleanly in the transaction feed. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
